@@ -22,14 +22,14 @@ if err != nil {
 }
 
 // Process a document with OCR
-resp, err := client.OCR.Process(&mistral.OCRRequest{
-    Document: mistral.OCRRequestModel{
-        Type:         "document_url",
-        DocumentURL:  "https://example.com/document.pdf",
-        DocumentName: "document.pdf",
-    },
-    Model: "mistral-ocr-latest",
-})
+resp, err := client.OCR.Process(&OCRRequest{
+		Document: OCRRequestModel{
+			Type:         "document_url",
+			DocumentURL:  "https://arxiv.org/pdf/2201.04234",
+			DocumentName: "2201.04234.pdf",
+		},
+		Model: "mistral-ocr-latest",
+	})
 if err != nil {
     log.Fatal(err)
 }
