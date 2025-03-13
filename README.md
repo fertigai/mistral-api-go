@@ -37,27 +37,6 @@ if err != nil {
 fmt.Println(resp.Choices[0].Message.Content)
 ```
 
-## Features
-
-- Complete Mistral AI API coverage
-- Streaming support for chat completions and agents
-- Context support for cancellation and timeouts
-- Configurable HTTP client
-- Custom base URL support
-- Error handling and response parsing
-- File upload and download support
-- Fine-tuning job management
-- Content moderation
-- Optical Character Recognition (OCR)
-- Agent-based interactions with custom tools
-- Advanced embedding operations with similarity calculation
-- Batch processing for embeddings
-- Fill-in-the-Middle (FIM) text generation
-- Text classification with multi-label support
-- Enhanced model information and capabilities
-- Token estimation and model performance metrics
-- Batch processing with retry and concurrency control
-
 ## Services
 
 The client is divided into several services:
