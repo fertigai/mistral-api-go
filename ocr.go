@@ -1,7 +1,7 @@
 package mistral
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 )
 
@@ -12,16 +12,20 @@ type OCRService struct {
 
 // Process submits an OCR request
 func (s *OCRService) Process(request *OCRRequest) (*OCRResponse, error) {
-	ctx := context.Background()
-	req, err := s.client.newRequest(ctx, http.MethodPost, "ocr", request)
+	var response OCRResponse
+	resp, err := s.client.client.R().
+		SetBody(request).
+		SetResult(&response).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Authorization", s.client.AuthHeader()).
+		Post(s.client.FormUrl("ocr"))
+
 	if err != nil {
 		return nil, err
 	}
 
-	var response OCRResponse
-	_, err = s.client.do(req, &response)
-	if err != nil {
-		return nil, err
+	if resp.StatusCode() != http.StatusOK {
+		return nil, fmt.Errorf("failed to process OCR: %s", resp.String())
 	}
 
 	return &response, nil

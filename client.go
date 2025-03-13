@@ -1,13 +1,11 @@
 package mistral
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/go-resty/resty/v2"
 )
 
 const (
@@ -19,7 +17,7 @@ const (
 // Client manages communication with Mistral AI API.
 type Client struct {
 	// HTTP client used to communicate with the API.
-	client *http.Client
+	client *resty.Client
 
 	// Base URL for API requests.
 	baseURL *url.URL
@@ -32,6 +30,16 @@ type Client struct {
 
 	// Services used for communicating with different parts of the Mistral AI API.
 	OCR *OCRService
+
+	Files *FilesService
+}
+
+func (c *Client) AuthHeader() string {
+	return fmt.Sprintf("Bearer %s", c.apiKey)
+}
+
+func (c *Client) FormUrl(path string) string {
+	return fmt.Sprintf("%s/%s/%s", c.baseURL.String(), apiVersion, path)
 }
 
 // ClientOption is a function that modifies the client.
@@ -45,21 +53,22 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 
 	baseURL, _ := url.Parse(defaultBaseURL)
 	c := &Client{
-		client:    http.DefaultClient,
+		client:    resty.New(),
 		baseURL:   baseURL,
 		UserAgent: userAgent,
 		apiKey:    apiKey,
 	}
 
-	// Apply options
+	// Apply any custom options
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
 			return nil, err
 		}
 	}
 
-	// Create services
+	// Initialize services
 	c.OCR = &OCRService{client: c}
+	c.Files = &FilesService{client: c}
 
 	return c, nil
 }
@@ -74,80 +83,6 @@ func WithBaseURL(baseURL string) ClientOption {
 		c.baseURL = u
 		return nil
 	}
-}
-
-// WithHTTPClient sets a custom HTTP client.
-func WithHTTPClient(httpClient *http.Client) ClientOption {
-	return func(c *Client) error {
-		if httpClient == nil {
-			return fmt.Errorf("HTTP client cannot be nil")
-		}
-		c.client = httpClient
-		return nil
-	}
-}
-
-// newRequest creates an API request.
-func (c *Client) newRequest(ctx context.Context, method, path string, body interface{}) (*http.Request, error) {
-	u, err := c.baseURL.Parse(fmt.Sprintf("/v1/%s", path))
-	if err != nil {
-		return nil, err
-	}
-
-	var buf io.ReadWriter
-	if body != nil {
-		buf = new(bytes.Buffer)
-		enc := json.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		err := enc.Encode(body)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), buf)
-	if err != nil {
-		return nil, err
-	}
-
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", c.UserAgent)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
-
-	return req, nil
-}
-
-// do sends an API request and returns the API response.
-func (c *Client) do(req *http.Request, v interface{}) (*http.Response, error) {
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		var errResp struct {
-			Message string `json:"message"`
-		}
-		if err = json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Message != "" {
-			return resp, &Error{
-				Response: resp,
-				Message:  errResp.Message,
-			}
-		}
-		return resp, fmt.Errorf("API request failed with status code: %d", resp.StatusCode)
-	}
-
-	if v != nil {
-		if err = json.NewDecoder(resp.Body).Decode(v); err != nil {
-			return nil, err
-		}
-	}
-
-	return resp, nil
 }
 
 // Error represents an error response from the API.
