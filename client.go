@@ -31,17 +31,7 @@ type Client struct {
 	apiKey string
 
 	// Services used for communicating with different parts of the Mistral AI API.
-	Chat        *ChatService
-	Models      *ModelsService
-	Embeddings  *EmbeddingsService
-	Files       *FilesService
-	FineTuning  *FineTuningService
-	Moderations *ModerationsService
-	OCR         *OCRService
-	Agents      *AgentService
-	FIM         *FIMService
-	Classifiers *ClassifiersService
-	Batch       *BatchService
+	OCR *OCRService
 }
 
 // ClientOption is a function that modifies the client.
@@ -69,17 +59,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 	}
 
 	// Create services
-	c.Chat = &ChatService{client: c}
-	c.Models = &ModelsService{client: c}
-	c.Embeddings = &EmbeddingsService{client: c}
-	c.Files = &FilesService{client: c}
-	c.FineTuning = &FineTuningService{client: c}
-	c.Moderations = &ModerationsService{client: c}
 	c.OCR = &OCRService{client: c}
-	c.Agents = &AgentService{client: c}
-	c.FIM = &FIMService{client: c}
-	c.Classifiers = &ClassifiersService{client: c}
-	c.Batch = &BatchService{client: c}
 
 	return c, nil
 }
@@ -109,7 +89,7 @@ func WithHTTPClient(httpClient *http.Client) ClientOption {
 
 // newRequest creates an API request.
 func (c *Client) newRequest(ctx context.Context, method, path string, body interface{}) (*http.Request, error) {
-	u, err := c.baseURL.Parse(fmt.Sprintf("/%s/%s", apiVersion, path))
+	u, err := c.baseURL.Parse(fmt.Sprintf("/v1/%s", path))
 	if err != nil {
 		return nil, err
 	}
@@ -148,26 +128,32 @@ func (c *Client) do(req *http.Request, v interface{}) (*http.Response, error) {
 	}
 	defer resp.Body.Close()
 
-	err = checkResponse(resp)
-	if err != nil {
-		return resp, err
+	if resp.StatusCode >= 400 {
+		var errResp struct {
+			Message string `json:"message"`
+		}
+		if err = json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Message != "" {
+			return resp, &Error{
+				Response: resp,
+				Message:  errResp.Message,
+			}
+		}
+		return resp, fmt.Errorf("API request failed with status code: %d", resp.StatusCode)
 	}
 
 	if v != nil {
-		if w, ok := v.(io.Writer); ok {
-			_, err = io.Copy(w, resp.Body)
-		} else {
-			err = json.NewDecoder(resp.Body).Decode(v)
+		if err = json.NewDecoder(resp.Body).Decode(v); err != nil {
+			return nil, err
 		}
 	}
 
-	return resp, err
+	return resp, nil
 }
 
-// Error represents an error response from the Mistral AI API.
+// Error represents an error response from the API.
 type Error struct {
 	Response *http.Response
-	Message  string `json:"message"`
+	Message  string
 }
 
 func (e *Error) Error() string {
@@ -175,23 +161,6 @@ func (e *Error) Error() string {
 		e.Response.Request.Method,
 		e.Response.Request.URL,
 		e.Response.StatusCode,
-		e.Message)
-}
-
-// checkResponse checks the API response for errors.
-func checkResponse(r *http.Response) error {
-	if c := r.StatusCode; c >= 200 && c <= 299 {
-		return nil
-	}
-
-	errorResponse := &Error{Response: r}
-	data, err := io.ReadAll(r.Body)
-	if err == nil && len(data) > 0 {
-		err := json.Unmarshal(data, errorResponse)
-		if err != nil {
-			errorResponse.Message = string(data)
-		}
-	}
-
-	return errorResponse
+		e.Message,
+	)
 }
