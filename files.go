@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+
+	"github.com/samber/lo"
 )
 
 type FilesService struct {
@@ -40,6 +43,32 @@ type DocumentUrlResponse struct {
 	Url string `json:"url"`
 }
 
+type SampleType string
+
+const (
+	SampleTypePretrain     SampleType = "pretrain"
+	SampleTypeInstruct     SampleType = "instruct"
+	SampleTypeBatchRequest SampleType = "batch_request"
+	SampleTypeBatchResult  SampleType = "batch_result"
+	SampleTypeBatchError   SampleType = "batch_error"
+	SampleTypeOCRInput     SampleType = "ocr_input"
+)
+
+type GetFilesRequest struct {
+	Page       int          `json:"page"`
+	PageSize   int          `json:"page_size"`
+	Source     string       `json:"source"`
+	Search     string       `json:"search"`
+	Purpose    string       `json:"purpose"`
+	SampleType []SampleType `json:"sample_type"`
+}
+
+type GetFilesResponse struct {
+	Data   []map[string]interface{} `json:"data"`
+	Total  int                      `json:"total"`
+	Object string                   `json:"object"`
+}
+
 func (s *FilesService) GetDocumentUrl(id string, expiry int) (*DocumentUrlResponse, error) {
 	var response DocumentUrlResponse
 	// todo validate expiry
@@ -55,6 +84,32 @@ func (s *FilesService) GetDocumentUrl(id string, expiry int) (*DocumentUrlRespon
 
 	if resp.StatusCode() != http.StatusOK {
 		return nil, fmt.Errorf("failed to get document url: %s", resp.String())
+	}
+
+	return &response, nil
+}
+
+func (s *FilesService) GetFiles(getFilesRequest *GetFilesRequest) (*GetFilesResponse, error) {
+	var response GetFilesResponse
+	resp, err := s.client.client.R().
+		SetHeader("Authorization", s.client.AuthHeader()).
+		SetResult(&response).
+		SetQueryParams(map[string]string{
+			"page":        strconv.Itoa(getFilesRequest.Page),
+			"page_size":   strconv.Itoa(getFilesRequest.PageSize),
+			"source":      getFilesRequest.Source,
+			"search":      getFilesRequest.Search,
+			"purpose":     getFilesRequest.Purpose,
+			"sample_type": strings.Join(lo.Map(getFilesRequest.SampleType, func(s SampleType, _ int) string { return string(s) }), ","),
+		}).
+		Get(s.client.FormUrl("files"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, fmt.Errorf("failed to get file: %s", resp.String())
 	}
 
 	return &response, nil

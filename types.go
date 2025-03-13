@@ -1,8 +1,9 @@
 package mistral
 
 type OCRRequestModel struct {
-	Type         string `json:"type" enum:"document_url"`
-	DocumentURL  string `json:"document_url" binding:"required"`
+	Type         string `json:"type" enum:"document_url,image_url"`
+	DocumentURL  string `json:"document_url" binding:"required_if=Type document_url"`
+	ImageURL     string `json:"image_url" binding:"required_if=Type image_url"`
 	DocumentName string `json:"document_name"`
 }
 
