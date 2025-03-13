@@ -35,7 +35,7 @@ if err != nil {
     log.Fatal(err)
 }
 fmt.Println(resp.Choices[0].Message.Content)
-
+```
 
 ## Features
 
