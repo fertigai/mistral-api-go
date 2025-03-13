@@ -1,4 +1,4 @@
-# go-mistral
+# mistral-api-go
 
 A Go client library for accessing the [Mistral AI API](https://docs.mistral.ai/).
 
@@ -13,6 +13,7 @@ go get github.com/tforrest/mistral-api-go
 ```go
 import "github.com/tforrest/mistral-api-go"
 
+// Example usage
 // Create a new client
 client, err := mistral.NewClient("your-api-key")
 if err != nil {
@@ -35,88 +36,6 @@ if err != nil {
 }
 fmt.Println(resp.Choices[0].Message.Content)
 
-// Stream chat completions
-req := &mistral.ChatCompletionRequest{
-    Model: "mistral-small-latest",
-    Messages: []mistral.Message{
-        {
-            Role:    "user",
-            Content: "Write a story about a space adventure.",
-        },
-    },
-    Stream: true,
-}
-
-stream, err := client.Chat.CreateStream(ctx, req)
-if err != nil {
-    log.Fatal(err)
-}
-defer stream.Close()
-
-for {
-    response, err := stream.Recv()
-    if err == io.EOF {
-        break
-    }
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Print(response.Choices[0].Message.Content)
-}
-
-// Generate embeddings
-embedResp, err := client.Embeddings.Create(ctx, &mistral.EmbeddingRequest{
-    Model: "mistral-embed",
-    Input: []string{"Hello, world!"},
-})
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Println(embedResp.Data[0].Embedding)
-
-// List available models
-models, err := client.Models.List(ctx)
-if err != nil {
-    log.Fatal(err)
-}
-for _, model := range models.Data {
-    fmt.Println(model.ID)
-}
-
-// Perform OCR on images
-files := []string{"file1_id", "file2_id"} // File IDs from previously uploaded images
-ocrResp, err := client.OCR.Create(ctx, &mistral.OCRRequest{
-    Model: "mistral-ocr-v1",
-    Files: files,
-    Languages: []string{"en", "fr"}, // Optional: specify languages to detect
-})
-if err != nil {
-    log.Fatal(err)
-}
-for _, result := range ocrResp.Results {
-    fmt.Printf("Text from %s: %s\n", result.FileID, result.Text)
-    fmt.Printf("Detected language: %s\n", result.Language)
-    for _, block := range result.Blocks {
-        fmt.Printf("Block text: %s (confidence: %.2f)\n", block.Text, block.Confidence)
-    }
-}
-
-// For large documents, use async OCR
-jobID, err := client.OCR.CreateAsync(ctx, &mistral.OCRRequest{
-    Model: "mistral-ocr-v1",
-    Files: files,
-})
-if err != nil {
-    log.Fatal(err)
-}
-
-// Poll for results
-result, err := client.OCR.GetAsyncResult(ctx, jobID)
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Printf("Async OCR completed with %d results\n", len(result.Results))
-```
 
 ## Features
 
