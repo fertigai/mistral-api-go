@@ -1,10 +1,10 @@
 package mistral
 
 type OCRRequestModel struct {
-	Type         string `json:"type" enum:"document_url,image_url"`
-	DocumentURL  string `json:"document_url" binding:"required_if=Type document_url"`
-	ImageURL     string `json:"image_url" binding:"required_if=Type image_url"`
-	DocumentName string `json:"document_name"`
+	Type         string `json:"type" enum:"document_url"`
+	DocumentURL  string `json:"document_url,omitempty" binding:"required_if=Type document_url"`
+	ImageURL     string `json:"image_url,omitempty" binding:"required_if=Type image_url"`
+	DocumentName string `json:"document_name,omitempty"`
 }
 
 // OCRRequest represents a request to perform OCR on an image.
