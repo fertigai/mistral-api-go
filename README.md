@@ -35,32 +35,3 @@ if err != nil {
 }
 fmt.Printf("Processed %d pages\n", len(resp.Pages))
 ```
-
-## Configuration
-
-You can configure the client using options:
-
-```go
-client, err := mistral.NewClient(
-    "your-api-key",
-    mistral.WithBaseURL("https://custom-url.com"),
-    mistral.WithHTTPClient(&http.Client{
-        Timeout: time.Second * 30,
-    }),
-)
-```
-
-## Error Handling
-
-The library returns detailed error messages from the API:
-
-```go
-_, err := client.OCR.Process(req)
-if err != nil {
-    if apiErr, ok := err.(*mistral.Error); ok {
-        fmt.Printf("API error: %v\n", apiErr.Message)
-        fmt.Printf("Status code: %d\n", apiErr.Response.StatusCode)
-    }
-    return err
-}
-```
