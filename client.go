@@ -32,6 +32,8 @@ type Client struct {
 	OCR *OCRService
 
 	Files *FilesService
+
+	Embedding *EmbeddingService
 }
 
 func (c *Client) AuthHeader() string {
@@ -69,7 +71,7 @@ func NewClient(apiKey string, opts ...ClientOption) (*Client, error) {
 	// Initialize services
 	c.OCR = &OCRService{client: c}
 	c.Files = &FilesService{client: c}
-
+	c.Embedding = &EmbeddingService{client: c}
 	return c, nil
 }
 
