@@ -1,4 +1,4 @@
-module github.com/tforrest/mistral-api-go
+module github.com/fertigai/mistral-api-go
 
 go 1.21
 
